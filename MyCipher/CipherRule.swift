@@ -3,6 +3,7 @@ import Foundation
 /// 暗号方式（今は1種類。将来ここに追加できます）
 enum CipherMethod: String, Codable, CaseIterable {
     case nexKana2 = "NEX-KANA 2"
+    case aesGcm = "AES-256-GCM"
 }
 
 /// 保存される暗号ルール1件
