@@ -32,7 +32,6 @@ targets:
       - path: MyCipher
         includes:
           - NexKanaCipherTests.swift   # 既存方式とAESのテスト
-          - AESGCMCipher.swift         # AES-GCM実装をテストターゲットにも含める
     dependencies:
       - target: MyCipher
     settings:
