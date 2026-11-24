@@ -45,4 +45,20 @@ final class NexKanaCipherTests: XCTestCase {
         _ = cipher.decrypt("☆☆☆♧♧♧", key: 13)
         _ = cipher.encrypt("", key: 99)
     }
+    func testAESGCMRoundTripUnicode() throws {
+        let text = "Hello, AES-GCM! こんにちは 🔐\n"
+        let encrypted = try AESGCMCipher.encrypt(text, passphrase: "correct horse battery staple")
+        XCTAssertTrue(encrypted.hasPrefix(AESGCMCipher.formatPrefix))
+        XCTAssertNotEqual(encrypted, text)
+        XCTAssertEqual(try AESGCMCipher.decrypt(encrypted, passphrase: "correct horse battery staple"), text)
+    }
+
+    func testAESGCMRejectsWrongPassphrase() throws {
+        let encrypted = try AESGCMCipher.encrypt("test", passphrase: "correct passphrase")
+        XCTAssertThrowsError(try AESGCMCipher.decrypt(encrypted, passphrase: "incorrect passphrase"))
+    }
+
+    func testAESGCMRejectsMalformedInput() {
+        XCTAssertThrowsError(try AESGCMCipher.decrypt("not an AES ciphertext", passphrase: "passphrase"))
+    }
 }
