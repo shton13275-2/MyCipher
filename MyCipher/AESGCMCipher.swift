@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import CommonCrypto
+import Security
 
 /// Password-based AES-GCM encryption for MyCipher.
 /// Format: MC-AESGCM1:<base64(salt[16] || CryptoKit combined box)>
@@ -15,6 +16,7 @@ enum AESGCMCipher {
         case invalidFormat
         case authenticationFailed
         case keyDerivationFailed
+        case randomGenerationFailed
 
         var errorDescription: String? {
             switch self {
@@ -22,13 +24,14 @@ enum AESGCMCipher {
             case .invalidFormat: return "AES暗号文の形式が正しくありません。"
             case .authenticationFailed: return "復号できませんでした。パスフレーズが違うか、暗号文が破損しています。"
             case .keyDerivationFailed: return "鍵の生成に失敗しました。"
+            case .randomGenerationFailed: return "乱数の生成に失敗しました。"
             }
         }
     }
 
     static func encrypt(_ plaintext: String, passphrase: String) throws -> String {
         guard !passphrase.isEmpty else { throw CipherError.emptyPassphrase }
-        let salt = randomData(count: saltLength)
+        let salt = try randomData(count: saltLength)
         let key = try deriveKey(passphrase: passphrase, salt: salt)
         let nonce = AES.GCM.Nonce()
         let sealed = try AES.GCM.seal(Data(plaintext.utf8), using: key, nonce: nonce)
@@ -82,9 +85,11 @@ enum AESGCMCipher {
         return SymmetricKey(data: derived)
     }
 
-    private static func randomData(count: Int) -> Data {
+    private static func randomData(count: Int) throws -> Data {
         var bytes = [UInt8](repeating: 0, count: count)
-        _ = SecRandomCopyBytes(kSecRandomDefault, count, &bytes)
+        guard SecRandomCopyBytes(kSecRandomDefault, count, &bytes) == errSecSuccess else {
+            throw CipherError.randomGenerationFailed
+        }
         return Data(bytes)
     }
 }
