@@ -31,7 +31,7 @@ targets:
     sources:
       - path: MyCipher
         includes:
-          - NexKanaCipherTests.swift   # テストだけをここに入れる
+          - NexKanaCipherTests.swift   # 既存方式とAESのテスト
     dependencies:
       - target: MyCipher
     settings:

@@ -1,35 +1,64 @@
 import SwiftUI
 
-/// 暗号化画面・復号画面（mode で切り替え）
+/// Encryption and decryption screen. Supports NEX-KANA 2 and AES-GCM.
 struct CipherView: View {
     let mode: CipherMode
     @EnvironmentObject var store: RuleStore
     @StateObject private var vm = CipherViewModel()
 
     private var selectedRule: CipherRule? {
-        store.rules.first { $0.id == vm.selectedRuleID }
+        store.rules.first { $0.id == vm.selectedRuleID && $0.method == .nexKana2 }
+    }
+
+    private var kanaRules: [CipherRule] {
+        store.rules.filter { $0.method == .nexKana2 }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ルール").font(.subheadline).foregroundColor(.secondary)
-                    Picker("ルール", selection: $vm.selectedRuleID) {
-                        ForEach(store.rules) { Text($0.name).tag(Optional($0.id)) }
+                    Text("暗号方式").font(.subheadline).foregroundColor(.secondary)
+                    Picker("暗号方式", selection: $vm.selectedMethod) {
+                        ForEach(CipherMethod.allCases, id: \.self) { method in
+                            Text(method.rawValue).tag(method)
+                        }
                     }
-                    .pickerStyle(.menu)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .pickerStyle(.segmented)
                 }
                 .card()
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("鍵（0〜45）").font(.subheadline).foregroundColor(.secondary)
-                    TextField("13", text: $vm.keyText)
-                        .keyboardType(.numberPad)
-                        .font(.system(.body, design: .monospaced))
+                if vm.selectedMethod == .nexKana2 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ルール").font(.subheadline).foregroundColor(.secondary)
+                        Picker("ルール", selection: $vm.selectedRuleID) {
+                            ForEach(kanaRules) { Text($0.name).tag(Optional($0.id)) }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .card()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("鍵（0〜45）").font(.subheadline).foregroundColor(.secondary)
+                        TextField("13", text: $vm.keyText)
+                            .keyboardType(.numberPad)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                    .card()
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("パスフレーズ").font(.subheadline).foregroundColor(.secondary)
+                        SecureField("8文字以上を推奨", text: $vm.passphrase)
+                            .textContentType(.password)
+                        Text(mode == .encrypt
+                             ? "暗号化には8文字以上のパスフレーズを使用してください。パスフレーズは保存されません。"
+                             : "暗号化時に使用したパスフレーズを入力してください。")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    .card()
                 }
-                .card()
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(mode == .encrypt ? "文章" : "暗号文")
@@ -77,7 +106,7 @@ struct CipherView: View {
         .navigationTitle(mode.title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if vm.selectedRuleID == nil { vm.selectRule(store.rules.first) }
+            if vm.selectedRuleID == nil { vm.selectRule(kanaRules.first) }
         }
         .onChange(of: vm.selectedRuleID) { _, _ in
             if let r = selectedRule { vm.keyText = String(r.key) }
